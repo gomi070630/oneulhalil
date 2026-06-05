@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+import { useMockStore, type Task } from "@/lib/mock-store";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,40 +7,37 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { categoriesQuery } from "@/lib/queries";
-import { createTask, updateTask } from "@/lib/tasks.functions";
 import { todayISO } from "@/lib/date-utils";
 import { toast } from "sonner";
 
-type Task = {
-  id?: string;
-  title?: string;
-  description?: string | null;
-  category_id?: string | null;
-  start_date?: string;
-  due_date?: string;
-  estimated_minutes?: number;
-  importance?: number;
-  progress?: number;
+type TaskForm = {
+  title: string;
+  description: string;
+  category_id: string;
+  start_date: string;
+  due_date: string;
+  estimated_minutes: number;
+  importance: number;
+  progress: number;
 };
 
 export function TaskFormDialog({ children, task, open, onOpenChange }: {
-  children?: React.ReactNode; task?: Task; open?: boolean; onOpenChange?: (v: boolean) => void;
+  children?: React.ReactNode;
+  task?: Partial<Task>;
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = open !== undefined;
   const o = isControlled ? open : internalOpen;
   const setO = isControlled ? (onOpenChange ?? (() => {})) : setInternalOpen;
 
-  const qc = useQueryClient();
-  const { data: cats = [] } = useQuery(categoriesQuery());
-  const createFn = useServerFn(createTask);
-  const updateFn = useServerFn(updateTask);
+  const { categories, tasks, setTasks } = useMockStore();
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<TaskForm>({
     title: task?.title ?? "",
     description: task?.description ?? "",
-    category_id: task?.category_id ?? (cats[0]?.id ?? ""),
+    category_id: task?.category_id ?? (categories[0]?.id ?? ""),
     start_date: task?.start_date ?? todayISO(),
     due_date: task?.due_date ?? todayISO(),
     estimated_minutes: task?.estimated_minutes ?? 60,
@@ -49,27 +45,33 @@ export function TaskFormDialog({ children, task, open, onOpenChange }: {
     progress: task?.progress ?? 0,
   });
 
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        title: form.title,
-        description: form.description || null,
-        category_id: form.category_id || null,
-        start_date: form.start_date,
-        due_date: form.due_date,
-        estimated_minutes: Number(form.estimated_minutes),
-        importance: Number(form.importance),
+  function handleSave() {
+    if (!form.title) return;
+    const payload = {
+      title: form.title,
+      description: form.description || null,
+      category_id: form.category_id || null,
+      start_date: form.start_date,
+      due_date: form.due_date,
+      estimated_minutes: Number(form.estimated_minutes),
+      importance: Number(form.importance),
+    };
+    if (task?.id) {
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, ...payload, progress: form.progress } : t));
+      toast.success("수정되었습니다");
+    } else {
+      const newTask: Task = {
+        id: "task-" + Math.random().toString(36).slice(2, 9),
+        ...payload,
+        progress: 0,
+        completed: false,
+        created_at: new Date().toISOString(),
       };
-      if (task?.id) return updateFn({ data: { ...payload, id: task.id, progress: form.progress } });
-      return createFn({ data: payload });
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["tasks"] });
-      toast.success(task?.id ? "수정되었습니다" : "할 일이 추가되었습니다");
-      setO(false);
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
+      setTasks(prev => [...prev, newTask]);
+      toast.success("할 일이 추가되었습니다");
+    }
+    setO(false);
+  }
 
   return (
     <Dialog open={o} onOpenChange={setO}>
@@ -90,7 +92,7 @@ export function TaskFormDialog({ children, task, open, onOpenChange }: {
             <Select value={form.category_id ?? ""} onValueChange={(v) => setForm({ ...form, category_id: v })}>
               <SelectTrigger><SelectValue placeholder="과목 선택" /></SelectTrigger>
               <SelectContent>
-                {cats.map((c) => (
+                {categories.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full" style={{ background: c.color }} />{c.name}</span>
                   </SelectItem>
@@ -124,7 +126,7 @@ export function TaskFormDialog({ children, task, open, onOpenChange }: {
           )}
         </div>
         <DialogFooter>
-          <Button onClick={() => mutation.mutate()} disabled={!form.title || mutation.isPending}>저장</Button>
+          <Button onClick={handleSave} disabled={!form.title}>저장</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
