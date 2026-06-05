@@ -1,11 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { categoriesQuery, tasksQuery } from "@/lib/queries";
-import { deleteTask, updateTask } from "@/lib/tasks.functions";
+import { useMockStore } from "@/lib/mock-store";
 import { TaskFormDialog } from "@/components/task-form-dialog";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dDayLabel } from "@/lib/date-utils";
 import { Plus, Trash2, Check } from "lucide-react";
@@ -18,16 +14,12 @@ export const Route = createFileRoute("/_app/tasks")({
 });
 
 function TasksPage() {
-  const { data: cats = [] } = useQuery(categoriesQuery());
-  const { data: tasks = [] } = useQuery(tasksQuery());
-  const qc = useQueryClient();
-  const updateFn = useServerFn(updateTask);
-  const deleteFn = useServerFn(deleteTask);
+  const { categories, tasks, setTasks } = useMockStore();
   const [sort, setSort] = useState("due_asc");
   const [filterCat, setFilterCat] = useState("all");
   const [filterDone, setFilterDone] = useState("all");
 
-  const catMap = useMemo(() => Object.fromEntries(cats.map((c) => [c.id, c])), [cats]);
+  const catMap = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
 
   const filtered = useMemo(() => {
     let r = [...tasks];
@@ -61,7 +53,7 @@ function TasksPage() {
           <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 과목</SelectItem>
-            {cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterDone} onValueChange={setFilterDone}>
@@ -82,9 +74,8 @@ function TasksPage() {
           return (
             <div key={t.id} className={cn("p-4 bg-card rounded-2xl ring-1 ring-black/5 flex items-center gap-3", t.completed && "opacity-50")}>
               <button
-                onClick={async () => {
-                  await updateFn({ data: { id: t.id, completed: !t.completed, progress: !t.completed ? 100 : t.progress } });
-                  qc.invalidateQueries({ queryKey: ["tasks"] });
+                onClick={() => {
+                  setTasks(prev => prev.map(pt => pt.id === t.id ? { ...pt, completed: !pt.completed, progress: !pt.completed ? 100 : pt.progress } : pt));
                 }}
                 className={cn("size-5 rounded-full border-2 flex items-center justify-center shrink-0",
                   t.completed ? "bg-foreground border-foreground text-background" : "border-muted-foreground/40")}>
@@ -100,10 +91,9 @@ function TasksPage() {
                 </div>
               </TaskFormDialog>
               <span className="text-[11px] font-semibold text-muted-foreground mr-1">{dday.text}</span>
-              <button onClick={async () => {
+              <button onClick={() => {
                 if (!confirm("삭제할까요?")) return;
-                await deleteFn({ data: { id: t.id } });
-                qc.invalidateQueries({ queryKey: ["tasks"] });
+                setTasks(prev => prev.filter(pt => pt.id !== t.id));
                 toast.success("삭제됨");
               }} className="text-muted-foreground hover:text-destructive p-1">
                 <Trash2 className="size-4" />

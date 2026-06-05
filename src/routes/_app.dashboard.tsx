@@ -1,16 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { categoriesQuery, tasksQuery, routinesQuery } from "@/lib/queries";
+import { useMockStore } from "@/lib/mock-store";
 import { MonthCalendar, type CalendarBar } from "@/components/month-calendar";
 import { TaskFormDialog } from "@/components/task-form-dialog";
-import { dDayLabel, isWithin, parseISO, toISO } from "@/lib/date-utils";
+import { dDayLabel, isWithin, parseISO } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
 import { Plus, Sparkles, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { updateTask, deleteTask } from "@/lib/tasks.functions";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/dashboard")({
   head: () => ({ meta: [{ title: "대시보드 — StudyMate" }] }),
@@ -20,14 +16,9 @@ export const Route = createFileRoute("/_app/dashboard")({
 function Dashboard() {
   const [selected, setSelected] = useState<Date>(new Date());
   const [filter, setFilter] = useState<string>("all");
-  const { data: cats = [] } = useQuery(categoriesQuery());
-  const { data: tasks = [] } = useQuery(tasksQuery());
-  const { data: routines = [] } = useQuery(routinesQuery());
-  const qc = useQueryClient();
-  const updateFn = useServerFn(updateTask);
-  const deleteFn = useServerFn(deleteTask);
+  const { categories, tasks, routines, setTasks } = useMockStore();
 
-  const catMap = useMemo(() => Object.fromEntries(cats.map((c) => [c.id, c])), [cats]);
+  const catMap = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
 
   const bars: CalendarBar[] = useMemo(() =>
     tasks
@@ -76,7 +67,7 @@ function Dashboard() {
 
       <nav className="flex gap-2 mb-6 overflow-x-auto no-scrollbar -mx-1 px-1">
         <FilterChip active={filter === "all"} onClick={() => setFilter("all")} label="전체" />
-        {cats.map((c) => (
+        {categories.map((c) => (
           <FilterChip key={c.id} active={filter === c.id} onClick={() => setFilter(c.id)} label={c.name} color={c.color} />
         ))}
       </nav>
@@ -96,9 +87,8 @@ function Dashboard() {
             return (
               <div key={t.id} className={cn("p-4 bg-card rounded-2xl ring-1 ring-black/5 flex items-center gap-3", t.completed && "opacity-50")}>
                 <button
-                  onClick={async () => {
-                    await updateFn({ data: { id: t.id, completed: !t.completed, progress: !t.completed ? 100 : t.progress } });
-                    qc.invalidateQueries({ queryKey: ["tasks"] });
+                  onClick={() => {
+                    setTasks(prev => prev.map(pt => pt.id === t.id ? { ...pt, completed: !pt.completed, progress: !pt.completed ? 100 : pt.progress } : pt));
                   }}
                   className={cn("size-5 rounded-full border-2 flex items-center justify-center shrink-0",
                     t.completed ? "bg-foreground border-foreground text-background" : "border-muted-foreground/40")}>

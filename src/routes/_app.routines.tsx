@@ -1,9 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { categoriesQuery, routinesQuery } from "@/lib/queries";
-import { createRoutine, updateRoutine, deleteRoutine } from "@/lib/routines.functions";
+import { useMockStore } from "@/lib/mock-store";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,20 +18,14 @@ export const Route = createFileRoute("/_app/routines")({
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 
 function RoutinesPage() {
-  const { data: cats = [] } = useQuery(categoriesQuery());
-  const { data: routines = [] } = useQuery(routinesQuery());
-  const qc = useQueryClient();
-  const createFn = useServerFn(createRoutine);
-  const updateFn = useServerFn(updateRoutine);
-  const deleteFn = useServerFn(deleteRoutine);
-
+  const { categories, routines, setRoutines } = useMockStore();
   const [editing, setEditing] = useState<any>(null);
 
   function newRoutine() {
-    setEditing({ title: "", category_id: cats[0]?.id ?? null, repeat_type: "daily", repeat_days: [], start_time: "", active: true });
+    setEditing({ title: "", category_id: categories[0]?.id ?? null, repeat_type: "daily", repeat_days: [], start_time: "", active: true });
   }
 
-  async function save() {
+  function save() {
     if (!editing?.title) return;
     const payload = {
       title: editing.title,
@@ -44,13 +35,13 @@ function RoutinesPage() {
       start_time: editing.start_time || null,
       active: editing.active,
     };
-    try {
-      if (editing.id) await updateFn({ data: { id: editing.id, ...payload } });
-      else await createFn({ data: payload });
-      qc.invalidateQueries({ queryKey: ["routines"] });
-      setEditing(null);
-      toast.success("저장됨");
-    } catch (e: any) { toast.error(e.message); }
+    if (editing.id) {
+      setRoutines(prev => prev.map(r => r.id === editing.id ? { ...r, ...payload } : r));
+    } else {
+      setRoutines(prev => [...prev, { id: "routine-" + Math.random().toString(36).slice(2, 9), ...payload, created_at: new Date().toISOString() }]);
+    }
+    setEditing(null);
+    toast.success("저장됨");
   }
 
   return (
@@ -59,7 +50,7 @@ function RoutinesPage() {
       <div className="space-y-2 mb-4">
         {routines.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">아직 루틴이 없어요</p>}
         {routines.map((r) => {
-          const c = cats.find((x) => x.id === r.category_id);
+          const c = categories.find((x) => x.id === r.category_id);
           const repeatLabel = { daily: "매일", weekday: "평일", weekend: "주말", custom: (r.repeat_days as number[]).map((d) => DOW[d]).join(", ") }[r.repeat_type as string];
           return (
             <div key={r.id} className="p-3 bg-card rounded-2xl ring-1 ring-black/5 flex items-center gap-3">
@@ -69,10 +60,9 @@ function RoutinesPage() {
                 <p className="text-[11px] text-muted-foreground">{repeatLabel}{r.start_time ? ` · ${r.start_time}` : ""}</p>
               </div>
               <button onClick={() => setEditing({ ...r })} className="p-1.5 text-muted-foreground"><Edit2 className="size-4" /></button>
-              <button onClick={async () => {
+              <button onClick={() => {
                 if (!confirm("삭제할까요?")) return;
-                await deleteFn({ data: { id: r.id } });
-                qc.invalidateQueries({ queryKey: ["routines"] });
+                setRoutines(prev => prev.filter(x => x.id !== r.id));
               }} className="p-1.5 text-muted-foreground hover:text-destructive"><Trash2 className="size-4" /></button>
             </div>
           );
@@ -94,7 +84,7 @@ function RoutinesPage() {
                 <Select value={editing.category_id ?? ""} onValueChange={(v) => setEditing({ ...editing, category_id: v })}>
                   <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                   <SelectContent>
-                    {cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
