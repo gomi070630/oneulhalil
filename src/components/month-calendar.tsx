@@ -23,7 +23,7 @@ export function MonthCalendar({ bars, selected, onSelect }: Props) {
   const days = useMemo(() => monthDays(cursor.getFullYear(), cursor.getMonth()), [cursor]);
   const weeks: Date[][] = [];
   for (let i = 0; i < 6; i++) weeks.push(days.slice(i * 7, i * 7 + 7));
-  const today = new Date();
+  const today = selected;
 
   return (
     <div className="bg-muted/50 rounded-[20px] p-4 ring-1 ring-black/5">

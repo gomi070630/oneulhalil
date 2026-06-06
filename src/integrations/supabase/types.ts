@@ -119,7 +119,6 @@ export type Database = {
           due_date: string
           estimated_minutes: number
           id: string
-          importance: number
           progress: number
           start_date: string
           title: string
@@ -135,7 +134,6 @@ export type Database = {
           due_date: string
           estimated_minutes?: number
           id?: string
-          importance?: number
           progress?: number
           start_date?: string
           title: string
@@ -151,7 +149,6 @@ export type Database = {
           due_date?: string
           estimated_minutes?: number
           id?: string
-          importance?: number
           progress?: number
           start_date?: string
           title?: string

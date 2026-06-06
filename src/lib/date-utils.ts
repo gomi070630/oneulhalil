@@ -22,16 +22,20 @@ export function daysBetween(a: Date, b: Date): number {
 }
 
 export function dDayLabel(dueISO: string): { text: string; tone: "red" | "amber" | "blue" | "muted" } {
-  const due = parseISO(dueISO);
-  const t = new Date();
-  t.setHours(0, 0, 0, 0);
-  due.setHours(0, 0, 0, 0);
-  const diff = daysBetween(t, due);
-  if (diff < 0) return { text: `D+${-diff}`, tone: "red" };
-  if (diff === 0) return { text: "D-Day", tone: "red" };
-  if (diff === 1) return { text: "D-1", tone: "red" };
-  if (diff <= 3) return { text: `D-${diff}`, tone: "amber" };
-  return { text: `D-${diff}`, tone: "blue" };
+  const dueDay = parseISO(dueISO);
+  // treat due time as end of day
+  dueDay.setHours(23, 59, 59, 999);
+  const now = new Date();
+  const ms = dueDay.getTime() - now.getTime();
+  if (ms < 0) return { text: "마감", tone: "red" };
+  const oneDay = 24 * 60 * 60 * 1000;
+  if (ms < oneDay) {
+    const hours = Math.ceil(ms / (60 * 60 * 1000));
+    return { text: `${hours}시간 남음`, tone: "red" };
+  }
+  const days = Math.ceil(ms / oneDay);
+  if (days <= 3) return { text: `D-${days}`, tone: "amber" };
+  return { text: `D-${days}`, tone: "blue" };
 }
 
 export function monthDays(year: number, month: number): Date[] {

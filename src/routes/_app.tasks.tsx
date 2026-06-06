@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useMockStore } from "@/lib/mock-store";
+import { useMockStore, type Task } from "@/lib/mock-store";
 import { TaskFormDialog } from "@/components/task-form-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dDayLabel } from "@/lib/date-utils";
@@ -12,6 +12,16 @@ export const Route = createFileRoute("/_app/tasks")({
   head: () => ({ meta: [{ title: "할 일 — StudyMate" }] }),
   component: TasksPage,
 });
+
+function computePriority(task: Task) {
+  const now = new Date();
+  const due = new Date(task.due_date);
+  const hoursUntilDue = Math.max(1, (due.getTime() - now.getTime()) / 3_600_000);
+  const urgency = 1 / hoursUntilDue;
+  const estimatedHours = task.estimated_minutes / 60;
+  const incompletion = 1 - task.progress / 100;
+  return urgency * 100 + estimatedHours * 10 + incompletion * 50;
+}
 
 function TasksPage() {
   const { categories, tasks, setTasks } = useMockStore();
@@ -30,7 +40,7 @@ function TasksPage() {
       if (sort === "due_asc") return a.due_date.localeCompare(b.due_date);
       if (sort === "due_desc") return b.due_date.localeCompare(a.due_date);
       if (sort === "created") return b.created_at.localeCompare(a.created_at);
-      if (sort === "importance") return b.importance - a.importance;
+      if (sort === "priority") return computePriority(b) - computePriority(a);
       return 0;
     });
     return r;
@@ -46,7 +56,7 @@ function TasksPage() {
             <SelectItem value="due_asc">마감 빠른순</SelectItem>
             <SelectItem value="due_desc">마감 늦은순</SelectItem>
             <SelectItem value="created">최신순</SelectItem>
-            <SelectItem value="importance">중요도순</SelectItem>
+            <SelectItem value="priority">우선순위순</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterCat} onValueChange={setFilterCat}>
@@ -90,7 +100,9 @@ function TasksPage() {
                   <p className="text-[11px] text-muted-foreground mt-1">{t.start_date} ~ {t.due_date} · {t.estimated_minutes}분</p>
                 </div>
               </TaskFormDialog>
-              <span className="text-[11px] font-semibold text-muted-foreground mr-1">{dday.text}</span>
+              {!t.completed && (
+                <span className="text-[11px] font-semibold text-muted-foreground mr-1">{dday.text}</span>
+              )}
               <button onClick={() => {
                 if (!confirm("삭제할까요?")) return;
                 setTasks(prev => prev.filter(pt => pt.id !== t.id));

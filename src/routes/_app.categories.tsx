@@ -17,23 +17,49 @@ export const Route = createFileRoute("/_app/categories")({
 const PALETTE = ["#fda4af","#93c5fd","#fde047","#fdba74","#86efac","#fca5a5","#c4b5fd","#d4d4d8","#67e8f9","#f0abfc","#fcd34d","#a3e635"];
 
 function CategoriesPage() {
-  const { categories, setCategories } = useMockStore();
+  const { categories, setCategories, setTasks, setRoutines } = useMockStore();
   const [editing, setEditing] = useState<{ id?: string; name: string; color: string } | null>(null);
+  const [originalEditing, setOriginalEditing] = useState<{ id?: string; name: string; color: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function isModified() {
+    if (!editing || !originalEditing) return false;
+    return JSON.stringify(editing) !== JSON.stringify(originalEditing);
+  }
+
+  function closeEditing() {
+    if (!editing) return;
+    if (!isModified()) {
+      setEditing(null);
+      setError(null);
+      return;
+    }
+    if (!editing.name.trim()) {
+      setError("과목 이름은 필수입니다.");
+      return;
+    }
+    save();
+  }
 
   function save() {
-    if (!editing || !editing.name) return;
+    if (!editing || !editing.name.trim()) {
+      setError("과목 이름은 필수입니다.");
+      return;
+    }
+    const trimmed = editing.name.trim();
     if (editing.id) {
-      setCategories(prev => prev.map(c => c.id === editing.id ? { ...c, name: editing.name, color: editing.color } : c));
+      setCategories(prev => prev.map(c => c.id === editing.id ? { ...c, name: trimmed, color: editing.color } : c));
     } else {
       const newCat = {
         id: "cat-" + Math.random().toString(36).slice(2, 9),
-        name: editing.name,
+        name: trimmed,
         color: editing.color,
         is_default: false,
       };
       setCategories(prev => [...prev, newCat]);
     }
     setEditing(null);
+    setError(null);
     toast.success("저장됨");
   }
 
@@ -46,27 +72,49 @@ function CategoriesPage() {
             <span className="size-4 rounded-full" style={{ background: c.color }} />
             <span className="flex-1 font-medium text-sm">{c.name}</span>
             {c.is_default && <span className="text-[10px] text-muted-foreground">기본</span>}
-            <button onClick={() => setEditing({ id: c.id, name: c.name, color: c.color })} className="p-1.5 text-muted-foreground"><Edit2 className="size-4" /></button>
+            <button onClick={() => {
+              const initial = { id: c.id, name: c.name, color: c.color };
+              setEditing(initial);
+              setOriginalEditing(initial);
+              setError(null);
+            }} className="p-1.5 text-muted-foreground"><Edit2 className="size-4" /></button>
             <button onClick={() => {
               if (!confirm("삭제할까요?")) return;
+              // remove category
               setCategories(prev => prev.filter(x => x.id !== c.id));
+              // cascade-delete tasks and routines that reference this category
+              setTasks(prev => prev.filter(t => t.category_id !== c.id));
+              setRoutines(prev => prev.filter(r => r.category_id !== c.id));
             }} className="p-1.5 text-muted-foreground hover:text-destructive"><Trash2 className="size-4" /></button>
           </div>
         ))}
       </div>
 
-      <Button onClick={() => setEditing({ name: "", color: PALETTE[0] })} className="w-full">
+      <Button onClick={() => {
+        const initial = { name: "", color: PALETTE[0] };
+        setEditing(initial);
+        setOriginalEditing(initial);
+        setError(null);
+      }} className="w-full">
         <Plus className="size-4 mr-1" /> 과목 추가
       </Button>
 
-      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+      <Dialog open={!!editing} onOpenChange={(v) => {
+        if (!v) {
+          // discard edits on outside/ESC close
+          setEditing(null);
+          setOriginalEditing(null);
+          setError(null);
+        }
+      }}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>{editing?.id ? "과목 수정" : "새 과목"}</DialogTitle></DialogHeader>
           {editing && (
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label>이름</Label>
-                <Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+                <Input value={editing.name} onChange={(e) => { setEditing({ ...editing, name: e.target.value }); setError(null); }} />
+                {error && <p className="text-xs text-destructive">{error}</p>}
               </div>
               <div className="space-y-2">
                 <Label>색상</Label>

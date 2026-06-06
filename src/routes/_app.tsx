@@ -28,7 +28,11 @@ function AppLayout() {
 
 function TabLink({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
   return (
-    <Link to={to} className="flex flex-col items-center gap-0.5 text-muted-foreground py-1.5 px-3" activeProps={{ className: "flex flex-col items-center gap-0.5 text-foreground py-1.5 px-3" }}>
+    <Link
+      to={to}
+      className="flex flex-col items-center gap-0.5 text-muted-foreground py-1.5 px-3"
+      activeProps={{ className: "flex flex-col items-center gap-0.5 text-foreground py-1.5 px-3" }}
+    >
       {icon}
       <span className="text-[10px] font-medium">{label}</span>
     </Link>

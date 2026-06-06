@@ -9,7 +9,6 @@ const TaskInput = z.object({
   start_date: z.string(), // YYYY-MM-DD
   due_date: z.string(),
   estimated_minutes: z.number().int().min(5).max(10000),
-  importance: z.number().int().min(1).max(3),
 });
 
 export const listTasks = createServerFn({ method: "GET" })

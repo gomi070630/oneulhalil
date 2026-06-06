@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 export type Category = {
   id: string;
@@ -15,8 +15,8 @@ export type Task = {
   start_date: string;
   due_date: string;
   estimated_minutes: number;
-  importance: number;
   progress: number;
+  checklist?: { id: string; text: string; completed: boolean }[];
   completed: boolean;
   created_at: string;
 };
@@ -29,6 +29,7 @@ export type Routine = {
   repeat_days: number[];
   start_time: string | null;
   active: boolean;
+  completed_dates: string[];
   created_at: string;
 };
 
@@ -61,8 +62,8 @@ const INITIAL_TASKS: Task[] = [
     start_date: toISO(new Date(today.getFullYear(), today.getMonth(), 1)),
     due_date: toISO(new Date(today.getFullYear(), today.getMonth(), 10)),
     estimated_minutes: 180,
-    importance: 3,
     progress: 40,
+    checklist: [],
     completed: false,
     created_at: new Date().toISOString(),
   },
@@ -74,8 +75,8 @@ const INITIAL_TASKS: Task[] = [
     start_date: toISO(new Date(today.getFullYear(), today.getMonth(), 5)),
     due_date: toISO(new Date(today.getFullYear(), today.getMonth(), 7)),
     estimated_minutes: 120,
-    importance: 2,
     progress: 0,
+    checklist: [],
     completed: false,
     created_at: new Date().toISOString(),
   },
@@ -87,8 +88,8 @@ const INITIAL_TASKS: Task[] = [
     start_date: toISO(new Date(today.getFullYear(), today.getMonth(), 3)),
     due_date: toISO(new Date(today.getFullYear(), today.getMonth(), 12)),
     estimated_minutes: 240,
-    importance: 3,
     progress: 20,
+    checklist: [],
     completed: false,
     created_at: new Date().toISOString(),
   },
@@ -100,8 +101,8 @@ const INITIAL_TASKS: Task[] = [
     start_date: toISO(new Date(today.getFullYear(), today.getMonth(), 8)),
     due_date: toISO(new Date(today.getFullYear(), today.getMonth(), 15)),
     estimated_minutes: 90,
-    importance: 2,
     progress: 0,
+    checklist: [],
     completed: false,
     created_at: new Date().toISOString(),
   },
@@ -113,8 +114,8 @@ const INITIAL_TASKS: Task[] = [
     start_date: toISO(new Date(today.getFullYear(), today.getMonth(), 2)),
     due_date: toISO(new Date(today.getFullYear(), today.getMonth(), 9)),
     estimated_minutes: 300,
-    importance: 3,
     progress: 60,
+    checklist: [],
     completed: false,
     created_at: new Date().toISOString(),
   },
@@ -129,6 +130,7 @@ const INITIAL_ROUTINES: Routine[] = [
     repeat_days: [],
     start_time: "07:00",
     active: true,
+    completed_dates: [],
     created_at: new Date().toISOString(),
   },
   {
@@ -139,6 +141,7 @@ const INITIAL_ROUTINES: Routine[] = [
     repeat_days: [],
     start_time: "18:00",
     active: true,
+    completed_dates: [],
     created_at: new Date().toISOString(),
   },
   {
@@ -149,6 +152,7 @@ const INITIAL_ROUTINES: Routine[] = [
     repeat_days: [],
     start_time: "21:00",
     active: true,
+    completed_dates: [],
     created_at: new Date().toISOString(),
   },
   {
@@ -159,6 +163,7 @@ const INITIAL_ROUTINES: Routine[] = [
     repeat_days: [2, 4, 6],
     start_time: "19:30",
     active: true,
+    completed_dates: [],
     created_at: new Date().toISOString(),
   },
 ];
@@ -174,10 +179,70 @@ type Store = {
 
 const MockContext = createContext<Store | null>(null);
 
+const STORAGE_PREFIX = "student-ai-planner:mock:";
+const CATEGORIES_KEY = STORAGE_PREFIX + "categories";
+const TASKS_KEY = STORAGE_PREFIX + "tasks";
+const ROUTINES_KEY = STORAGE_PREFIX + "routines";
+
+function isLocalStorageAvailable() {
+  try {
+    return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+  } catch {
+    return false;
+  }
+}
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  if (!isLocalStorageAvailable()) return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch (e) {
+    // If parsing fails, fall back to defaults
+    // eslint-disable-next-line no-console
+    console.error("Failed to load from localStorage:", key, e);
+    return fallback;
+  }
+}
+
+function saveToStorage<T>(key: string, data: T) {
+  if (!isLocalStorageAvailable()) return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("Failed to save to localStorage:", key, e);
+  }
+}
+
 export function MockProvider({ children }: { children: React.ReactNode }) {
-  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
-  const [routines, setRoutines] = useState<Routine[]>(INITIAL_ROUTINES);
+  const [categories, setCategories] = useState<Category[]>(() =>
+    loadFromStorage<Category[]>(CATEGORIES_KEY, INITIAL_CATEGORIES)
+  );
+
+  const [tasks, setTasks] = useState<Task[]>(() =>
+    loadFromStorage<Task[]>(TASKS_KEY, INITIAL_TASKS)
+  );
+
+  const [routines, setRoutines] = useState<Routine[]>(() =>
+    loadFromStorage<Routine[]>(ROUTINES_KEY, INITIAL_ROUTINES)
+  );
+
+  // Persist categories when they change
+  useEffect(() => {
+    saveToStorage(CATEGORIES_KEY, categories);
+  }, [categories]);
+
+  // Persist tasks when they change
+  useEffect(() => {
+    saveToStorage(TASKS_KEY, tasks);
+  }, [tasks]);
+
+  // Persist routines when they change
+  useEffect(() => {
+    saveToStorage(ROUTINES_KEY, routines);
+  }, [routines]);
 
   return (
     <MockContext.Provider
