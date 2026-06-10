@@ -27,8 +27,7 @@ export const Route = createFileRoute("/_app/dashboard")({
 });
 
 function Dashboard() {
-  const fixedDate = new Date(2026, 5, 6);
-  const [selected, setSelected] = useState<Date>(fixedDate);
+  const [selected, setSelected] = useState<Date>(() => new Date());
   const [filter, setFilter] = useState<string>("all");
 
   const { categories, tasks, routines, setTasks, setRoutines } = useMockStore();
