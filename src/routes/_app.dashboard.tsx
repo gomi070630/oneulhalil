@@ -5,7 +5,20 @@ import { MonthCalendar, type CalendarBar } from "@/components/month-calendar";
 import { TaskFormDialog } from "@/components/task-form-dialog";
 import { dDayLabel, daysBetween, isWithin, parseISO } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/dashboard")({
@@ -195,11 +208,45 @@ function Dashboard() {
               <div
                 key={t.id}
                 className={cn(
-                  "p-4 bg-card rounded-2xl ring-1 ring-black/5 flex flex-col gap-3",
+                  "p-4 bg-card rounded-2xl ring-1 ring-black/5 flex flex-col gap-3 group relative",
                   t.completed && "opacity-50",
                 )}
               >
-                <div className="flex items-center gap-3">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      className={cn(
+                        "absolute right-3 top-3 p-2.5 text-muted-foreground hover:text-destructive hover:bg-muted/50 rounded-full transition-opacity z-10",
+                        t.completed ? "opacity-0 group-hover:opacity-100 focus:opacity-100" : ""
+                      )}
+                      aria-label="일정 삭제"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="w-[90vw] max-w-md rounded-2xl">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>일정을 삭제할까요?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        삭제한 일정은 복구할 수 없습니다.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>취소</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={(e) => {
+                          setTasks((prev) => prev.filter((pt) => pt.id !== t.id));
+                          toast.success("일정이 삭제되었습니다.");
+                        }}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        삭제
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                <div className="flex items-center gap-3 pr-8">
                   <button
                     onClick={() => {
                       setTasks((prev) =>

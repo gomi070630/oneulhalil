@@ -7,6 +7,18 @@ import { dDayLabel } from "@/lib/date-utils";
 import { Plus, Trash2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/tasks")({
   head: () => ({ meta: [{ title: "할 일 — StudyMate" }] }),
@@ -82,13 +94,15 @@ function TasksPage() {
           const c = catMap[t.category_id ?? ""];
           const dday = dDayLabel(t.due_date);
           return (
-            <div key={t.id} className={cn("p-4 bg-card rounded-2xl ring-1 ring-black/5 flex items-center gap-3", t.completed && "opacity-50")}>
+            <div key={t.id} className={cn("p-4 bg-card rounded-2xl ring-1 ring-black/5 flex items-center gap-3 group", t.completed && "opacity-50")}>
               <button
                 onClick={() => {
                   setTasks(prev => prev.map(pt => pt.id === t.id ? { ...pt, completed: !pt.completed, progress: !pt.completed ? 100 : pt.progress } : pt));
                 }}
                 className={cn("size-5 rounded-full border-2 flex items-center justify-center shrink-0",
-                  t.completed ? "bg-foreground border-foreground text-background" : "border-muted-foreground/40")}>
+                  t.completed ? "bg-foreground border-foreground text-background" : "border-muted-foreground/40")}
+                aria-label="완료 토글"
+              >
                 {t.completed && <Check className="size-3" />}
               </button>
               <TaskFormDialog task={t}>
@@ -101,15 +115,42 @@ function TasksPage() {
                 </div>
               </TaskFormDialog>
               {!t.completed && (
-                <span className="text-[11px] font-semibold text-muted-foreground mr-1">{dday.text}</span>
+                <span className="text-[11px] font-semibold text-muted-foreground mr-1 shrink-0">{dday.text}</span>
               )}
-              <button onClick={() => {
-                if (!confirm("삭제할까요?")) return;
-                setTasks(prev => prev.filter(pt => pt.id !== t.id));
-                toast.success("삭제됨");
-              }} className="text-muted-foreground hover:text-destructive p-1">
-                <Trash2 className="size-4" />
-              </button>
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button 
+                    className={cn(
+                      "p-2.5 -mr-1.5 text-muted-foreground hover:text-destructive hover:bg-muted/50 rounded-full transition-opacity shrink-0",
+                      t.completed ? "opacity-0 group-hover:opacity-100 focus:opacity-100" : ""
+                    )}
+                    aria-label="일정 삭제"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="w-[90vw] max-w-md rounded-2xl">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>일정을 삭제할까요?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      삭제한 일정은 복구할 수 없습니다.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>취소</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => {
+                        setTasks(prev => prev.filter(pt => pt.id !== t.id));
+                        toast.success("일정이 삭제되었습니다.");
+                      }} 
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      삭제
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           );
         })}
