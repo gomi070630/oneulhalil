@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useMockStore, type Task } from "@/lib/mock-store";
 import { TaskFormDialog } from "@/components/task-form-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { dDayLabel } from "@/lib/date-utils";
+import { dDayLabel, formatDateTime } from "@/lib/date-utils";
 import { Plus, Trash2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -110,7 +110,9 @@ function TasksPage() {
                     {c && <span className="size-2 rounded-full" style={{ background: c.color }} />}
                     <h3 className={cn("text-sm font-medium truncate", t.completed && "line-through")}>{t.title}</h3>
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-1">{t.start_date} ~ {t.due_date} · {t.estimated_minutes}분</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {t.start_date} ~ {formatDateTime(t.due_date)} · {t.estimated_minutes ? `${t.estimated_minutes}분` : "소요시간 미정"}
+                  </p>
                 </div>
               </TaskFormDialog>
               {!t.completed && (

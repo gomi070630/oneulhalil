@@ -12,6 +12,9 @@ export function toISO(d: Date): string {
 }
 
 export function parseISO(s: string): Date {
+  if (s.includes("T")) {
+    return new Date(s);
+  }
   const [y, m, d] = s.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
@@ -21,10 +24,26 @@ export function daysBetween(a: Date, b: Date): number {
   return Math.round(ms / 86400000);
 }
 
+export function hoursBetween(a: Date, b: Date): number {
+  const ms = (b.getTime() - a.getTime());
+  return ms / 3600000;
+}
+
+export function formatDateTime(iso: string): string {
+  const d = parseISO(iso);
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const hr = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${m}월 ${day}일 ${hr}:${min}`;
+}
+
 export function dDayLabel(dueISO: string): { text: string; tone: "red" | "amber" | "blue" | "muted" } {
-  const dueDay = parseISO(dueISO);
-  // treat due time as end of day
-  dueDay.setHours(23, 59, 59, 999);
+  let dueDay = parseISO(dueISO);
+  // 만약 시간이 없는 단순 날짜 형태라면 23:59:59를 설정
+  if (!dueISO.includes("T")) {
+    dueDay.setHours(23, 59, 59, 999);
+  }
   const now = new Date();
   const ms = dueDay.getTime() - now.getTime();
   if (ms < 0) return { text: "마감", tone: "red" };
@@ -54,9 +73,9 @@ export function sameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-export function isWithin(d: Date, startISO: string, endISO: string): boolean {
-  const s = parseISO(startISO);
-  const e = parseISO(endISO);
+export function isWithinTodayAndDue(d: Date, dueISO: string): boolean {
+  const s = new Date();
+  const e = parseISO(dueISO);
   s.setHours(0,0,0,0); e.setHours(0,0,0,0);
   const x = new Date(d); x.setHours(0,0,0,0);
   return x.getTime() >= s.getTime() && x.getTime() <= e.getTime();

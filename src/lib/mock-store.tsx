@@ -12,7 +12,6 @@ export type Task = {
   title: string;
   description: string | null;
   category_id: string | null;
-  start_date: string;
   due_date: string;
   estimated_minutes: number;
   progress: number;
@@ -59,7 +58,6 @@ const INITIAL_TASKS: Task[] = [
     title: "수학 수행평가 준비",
     description: "삼각함수 단원 정리 및 연습문제 풀이",
     category_id: "cat-2",
-    start_date: toISO(new Date(today.getFullYear(), today.getMonth(), 1)),
     due_date: toISO(new Date(today.getFullYear(), today.getMonth(), 10)),
     estimated_minutes: 180,
     progress: 40,
@@ -72,7 +70,6 @@ const INITIAL_TASKS: Task[] = [
     title: "영어 단어 시험",
     description: "3학년 1학기 1~5과 단어 암기",
     category_id: "cat-3",
-    start_date: toISO(new Date(today.getFullYear(), today.getMonth(), 5)),
     due_date: toISO(new Date(today.getFullYear(), today.getMonth(), 7)),
     estimated_minutes: 120,
     progress: 0,
@@ -85,7 +82,6 @@ const INITIAL_TASKS: Task[] = [
     title: "과학 실험 보고서",
     description: "화학 반응 실험 결과 정리 및 분석",
     category_id: "cat-4",
-    start_date: toISO(new Date(today.getFullYear(), today.getMonth(), 3)),
     due_date: toISO(new Date(today.getFullYear(), today.getMonth(), 12)),
     estimated_minutes: 240,
     progress: 20,
@@ -98,7 +94,6 @@ const INITIAL_TASKS: Task[] = [
     title: "역사 독후감 제출",
     description: "조선시대 문화 관련 독후감 800자",
     category_id: "cat-6",
-    start_date: toISO(new Date(today.getFullYear(), today.getMonth(), 8)),
     due_date: toISO(new Date(today.getFullYear(), today.getMonth(), 15)),
     estimated_minutes: 90,
     progress: 0,
@@ -111,7 +106,6 @@ const INITIAL_TASKS: Task[] = [
     title: "사회 조사 발표 준비",
     description: "지역 환경 문제 조사 및 PPT 제작",
     category_id: "cat-5",
-    start_date: toISO(new Date(today.getFullYear(), today.getMonth(), 2)),
     due_date: toISO(new Date(today.getFullYear(), today.getMonth(), 9)),
     estimated_minutes: 300,
     progress: 60,

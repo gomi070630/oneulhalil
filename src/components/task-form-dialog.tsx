@@ -14,9 +14,8 @@ type TaskForm = {
   title: string;
   description: string;
   category_id: string;
-  start_date: string;
   due_date: string;
-  estimated_minutes: number;
+  estimated_minutes: number | "";
   progress: number;
   checklist: { id: string; text: string; completed: boolean }[];
 };
@@ -35,12 +34,14 @@ export function TaskFormDialog({ children, task, open, onOpenChange }: {
   const { categories, setTasks } = useMockStore();
 
   function getInitialForm(task?: Partial<Task>): TaskForm {
+    let dd = task?.due_date ?? (todayISO() + "T23:59");
+    if (dd.length === 10) dd += "T23:59";
+
     return {
       title: task?.title ?? "",
       description: task?.description ?? "",
       category_id: task?.category_id ?? (categories[0]?.id ?? ""),
-      start_date: task?.start_date ?? todayISO(),
-      due_date: task?.due_date ?? todayISO(),
+      due_date: dd,
       estimated_minutes: task?.estimated_minutes ?? 60,
       progress: task?.progress ?? 0,
       checklist: task?.checklist ?? [],
@@ -50,6 +51,8 @@ export function TaskFormDialog({ children, task, open, onOpenChange }: {
   const [form, setForm] = useState<TaskForm>(() => getInitialForm(task));
   const [initialForm, setInitialForm] = useState<TaskForm>(() => getInitialForm(task));
   const [error, setError] = useState<string | null>(null);
+  const [showDescription, setShowDescription] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
 
   useEffect(() => {
     if (o) {
@@ -57,6 +60,8 @@ export function TaskFormDialog({ children, task, open, onOpenChange }: {
       setForm(initial);
       setInitialForm(initial);
       setError(null);
+      setShowDescription(!!initial.description);
+      setShowChecklist(initial.checklist.length > 0);
     }
   }, [o, task]);
 
@@ -69,9 +74,8 @@ export function TaskFormDialog({ children, task, open, onOpenChange }: {
       title: form.title.trim(),
       description: form.description || null,
       category_id: form.category_id || null,
-      start_date: form.start_date,
       due_date: form.due_date,
-      estimated_minutes: Number(form.estimated_minutes),
+      estimated_minutes: form.estimated_minutes === "" ? 60 : Number(form.estimated_minutes),
       checklist: form.checklist,
     };
     // compute progress from checklist if present
@@ -138,68 +142,84 @@ export function TaskFormDialog({ children, task, open, onOpenChange }: {
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="max-w-sm">
         <DialogHeader><DialogTitle>{task?.id ? "할 일 수정" : "새 할 일"}</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>제목</Label>
-            <Input value={form.title} onChange={(e) => { setForm({ ...form, title: e.target.value }); setError(null); }} placeholder="수학 수행평가 준비" />
-            {error && <p className="text-xs text-destructive">{error}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label>설명</Label>
-            <Textarea value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>과목</Label>
-            <Select value={form.category_id ?? ""} onValueChange={(v) => setForm({ ...form, category_id: v })}>
-              <SelectTrigger><SelectValue placeholder="과목 선택" /></SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full" style={{ background: c.color }} />{c.name}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label>시작일</Label>
-              <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+        <div className="space-y-4 pb-2">
+          <div className="flex gap-2 items-start">
+            <div className="space-y-1.5 flex-1 min-w-0">
+              <Label>제목</Label>
+              <Input value={form.title} onChange={(e) => { setForm({ ...form, title: e.target.value }); setError(null); }} placeholder="수학 수행평가 준비" />
+              {error && <p className="text-xs text-destructive">{error}</p>}
             </div>
-            <div className="space-y-1.5">
-              <Label>마감일</Label>
-              <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+            <div className="space-y-1.5 w-[110px] shrink-0">
+              <Label>과목</Label>
+              <Select value={form.category_id ?? ""} onValueChange={(v) => setForm({ ...form, category_id: v })}>
+                <SelectTrigger><SelectValue placeholder="과목 선택" /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="size-2 rounded-full shrink-0" style={{ background: c.color }} />
+                        <span className="truncate">{c.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label>예상 소요 (분)</Label>
-            <Input type="number" min={5} max={10000} value={form.estimated_minutes} onChange={(e) => setForm({ ...form, estimated_minutes: Number(e.target.value) })} />
-          </div>
-          {/* progress is computed from checklist; direct editing removed */}
+
+          {!showDescription ? (
+            <button type="button" onClick={() => setShowDescription(true)} className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors">
+              <Plus className="size-3" /> 설명 추가
+            </button>
+          ) : (
+            <div className="space-y-1.5">
+              <Label>설명</Label>
+              <Textarea value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
+            </div>
+          )}
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label>체크리스트</Label>
-              <button type="button" onClick={addChecklistItem} className="text-sm text-foreground inline-flex items-center gap-1">
-                <Plus className="size-4" /> 추가
-              </button>
-            </div>
-            <div className="space-y-2">
-              {form.checklist.length === 0 && <p className="text-xs text-muted-foreground">체크리스트가 없습니다</p>}
-              {form.checklist.map((it) => (
-                <div key={it.id} className="flex items-center gap-2">
-                  <input type="checkbox" checked={it.completed} onChange={(e) => updateChecklistItem(it.id, { completed: e.target.checked })} />
-                  <Input value={it.text} onChange={(e) => updateChecklistItem(it.id, { text: e.target.value })} placeholder="항목 내용" />
-                  <button type="button" onClick={() => removeChecklistItem(it.id)} className="text-muted-foreground p-1">
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
+            <Label>마감일시</Label>
+            <Input type="datetime-local" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
           </div>
+          
+          <div className="space-y-1.5">
+            <Label>예상 소요 (분)</Label>
+            <Input type="number" min={5} max={10000} placeholder="예: 60" value={form.estimated_minutes} onChange={(e) => {
+              const val = e.target.value;
+              setForm({ ...form, estimated_minutes: val === "" ? "" : Number(val) });
+            }} />
+          </div>
+
+          {!showChecklist ? (
+            <button type="button" onClick={() => { setShowChecklist(true); if(form.checklist.length === 0) addChecklistItem(); }} className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors">
+              <Plus className="size-3" /> 체크리스트 추가
+            </button>
+          ) : (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label>체크리스트</Label>
+                <button type="button" onClick={addChecklistItem} className="text-sm text-foreground inline-flex items-center gap-1">
+                  <Plus className="size-4" /> 추가
+                </button>
+              </div>
+              <div className="space-y-2">
+                {form.checklist.length === 0 && <p className="text-xs text-muted-foreground">체크리스트가 없습니다</p>}
+                {form.checklist.map((it) => (
+                  <div key={it.id} className="flex items-center gap-2">
+                    <input type="checkbox" checked={it.completed} onChange={(e) => updateChecklistItem(it.id, { completed: e.target.checked })} className="size-4 rounded border-gray-300 shrink-0" />
+                    <Input value={it.text} onChange={(e) => updateChecklistItem(it.id, { text: e.target.value })} placeholder="항목 내용" className="h-8 text-sm" />
+                    <button type="button" onClick={() => removeChecklistItem(it.id)} className="text-muted-foreground p-1 shrink-0">
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        <DialogFooter>
-          <Button onClick={handleSave} disabled={!form.title}>저장</Button>
+        <DialogFooter className="sticky bottom-0 left-0 right-0 bg-background pt-3 pb-1 mt-2 border-t z-10 w-full sm:w-auto">
+          <Button onClick={handleSave} disabled={!form.title} className="w-full">저장</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

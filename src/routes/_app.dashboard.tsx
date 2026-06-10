@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useMockStore } from "@/lib/mock-store";
 import { MonthCalendar, type CalendarBar } from "@/components/month-calendar";
 import { TaskFormDialog } from "@/components/task-form-dialog";
-import { dDayLabel, daysBetween, isWithin, parseISO } from "@/lib/date-utils";
+import { dDayLabel, daysBetween, hoursBetween, formatDateTime, isWithin, parseISO } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
 import { Plus, Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -76,16 +76,22 @@ function Dashboard() {
 
   const activeTasks = useMemo(() => tasks.filter((t) => !t.completed), [tasks]);
   const overdueTasks = useMemo(
-    () => activeTasks.filter((t) => daysBetween(selected, parseISO(t.due_date)) < 0),
-    [activeTasks, selected],
+    () => activeTasks.filter((t) => {
+      let d = parseISO(t.due_date);
+      if (!t.due_date.includes("T")) d.setHours(23, 59, 59);
+      return hoursBetween(new Date(), d) < 0;
+    }),
+    [activeTasks],
   );
   const dueSoonTasks = useMemo(
     () =>
       activeTasks.filter((t) => {
-        const daysLeft = Math.max(0, daysBetween(selected, parseISO(t.due_date)));
-        return daysLeft > 0 && daysLeft <= 3;
+        let d = parseISO(t.due_date);
+        if (!t.due_date.includes("T")) d.setHours(23, 59, 59);
+        const hoursLeft = hoursBetween(new Date(), d);
+        return hoursLeft > 0 && hoursLeft <= 72; // 3 days
       }),
-    [activeTasks, selected],
+    [activeTasks],
   );
   const totalRemainingPercent = useMemo(
     () => activeTasks.reduce((sum, t) => sum + Math.max(0, 100 - t.progress), 0),
@@ -96,11 +102,14 @@ function Dashboard() {
       Math.ceil(
         activeTasks.reduce((sum, t) => {
           const remaining = Math.max(0, 100 - t.progress);
-          const daysLeft = Math.max(0, daysBetween(selected, parseISO(t.due_date)));
-          return sum + remaining / Math.max(daysLeft, 1);
+          let d = parseISO(t.due_date);
+          if (!t.due_date.includes("T")) d.setHours(23, 59, 59);
+          let hoursLeft = hoursBetween(new Date(), d);
+          if (hoursLeft < 0) hoursLeft = 0;
+          return sum + remaining / Math.max(hoursLeft / 24, 0.1);
         }, 0),
       ),
-    [activeTasks, selected],
+    [activeTasks],
   );
   const summaryTone = overdueTasks.length > 0 ? "red" : dueSoonTasks.length > 0 ? "amber" : "blue";
   const summaryText =
@@ -198,10 +207,11 @@ function Dashboard() {
           {dayTasks.map((t) => {
             const c = catMap[t.category_id ?? ""];
             const dday = dDayLabel(t.due_date);
-            const dueDate = parseISO(t.due_date);
-            const daysLeft = Math.max(0, daysBetween(selected, dueDate));
+            let dueDate = parseISO(t.due_date);
+            if (!t.due_date.includes("T")) dueDate.setHours(23, 59, 59);
+            const hoursLeft = Math.max(0, hoursBetween(new Date(), dueDate));
             const remainingPercent = Math.max(0, 100 - t.progress);
-            const dailyTargetPercent = Math.ceil(remainingPercent / Math.max(daysLeft, 1));
+            const dailyTargetPercent = Math.ceil(remainingPercent / Math.max(hoursLeft / 24, 0.1));
             return (
               <div
                 key={t.id}
@@ -301,9 +311,9 @@ function Dashboard() {
                           <div>{remainingPercent}%</div>
                         </div>
                         <div className="rounded-xl bg-muted/60 p-2">
-                          <div className="font-medium text-[11px] text-foreground">남은 일수</div>
+                          <div className="font-medium text-[11px] text-foreground">남은 시간</div>
                           <div>
-                            {daysLeft}일 ({dueDate.getMonth() + 1}월 {dueDate.getDate()}일까지)
+                            {Math.floor(hoursLeft)}시간 ({formatDateTime(t.due_date)})
                           </div>
                         </div>
                         <div className="rounded-xl bg-muted/60 p-2">
