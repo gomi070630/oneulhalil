@@ -79,7 +79,9 @@ function Dashboard() {
   const overdueTasks = useMemo(
     () => activeTasks.filter((t) => {
       let d = parseISO(t.due_date);
-      if (!t.due_date.includes("T")) d.setHours(23, 59, 59);
+      if (t.due_date && !t.due_date.includes("T")) {
+  d.setHours(23, 59, 59);
+}
       return hoursBetween(new Date(), d) < 0;
     }),
     [activeTasks],
@@ -88,7 +90,9 @@ function Dashboard() {
     () =>
       activeTasks.filter((t) => {
         let d = parseISO(t.due_date);
-        if (!t.due_date.includes("T")) d.setHours(23, 59, 59);
+        if (t.due_date && !t.due_date.includes("T")) {
+  d.setHours(23, 59, 59);
+}
         const hoursLeft = hoursBetween(new Date(), d);
         return hoursLeft > 0 && hoursLeft <= 72; // 3 days
       }),
@@ -104,7 +108,9 @@ function Dashboard() {
         activeTasks.reduce((sum, t) => {
           const remaining = Math.max(0, 100 - t.progress);
           let d = parseISO(t.due_date);
-          if (!t.due_date.includes("T")) d.setHours(23, 59, 59);
+          if (t.due_date && !t.due_date.includes("T")) {
+  d.setHours(23, 59, 59);
+}
           let hoursLeft = hoursBetween(new Date(), d);
           if (hoursLeft < 0) hoursLeft = 0;
           return sum + remaining / Math.max(hoursLeft / 24, 0.1);
@@ -209,7 +215,9 @@ function Dashboard() {
             const c = catMap[t.category_id ?? ""];
             const dday = dDayLabel(t.due_date);
             let dueDate = parseISO(t.due_date);
-            if (!t.due_date.includes("T")) dueDate.setHours(23, 59, 59);
+            if (t.due_date && !t.due_date.includes("T")) {
+  d.setHours(23, 59, 59);
+}
             const hoursLeft = Math.max(0, hoursBetween(new Date(), dueDate));
             const remainingPercent = Math.max(0, 100 - t.progress);
             const dailyTargetPercent = Math.ceil(remainingPercent / Math.max(hoursLeft / 24, 0.1));
