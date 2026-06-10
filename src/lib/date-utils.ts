@@ -80,3 +80,20 @@ export function isWithinTodayAndDue(d: Date, dueISO: string): boolean {
   const x = new Date(d); x.setHours(0,0,0,0);
   return x.getTime() >= s.getTime() && x.getTime() <= e.getTime();
 }
+
+export function isWithin(
+  d: Date,
+  startISO: string,
+  dueISO: string,
+): boolean {
+  const start = parseISO(startISO);
+  const due = parseISO(dueISO);
+
+  start.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+
+  return x.getTime() >= start.getTime() && x.getTime() <= due.getTime();
+}

@@ -47,14 +47,15 @@ function Dashboard() {
   );
 
   const dayTasks = useMemo(
-    () =>
-      tasks.filter(
-        (t) =>
-          (filter === "all" || t.category_id === filter) &&
-          isWithin(selected, t.start_date, t.due_date),
-      ),
-    [tasks, selected, filter],
-  );
+  () =>
+    tasks.filter(
+      (t) =>
+        (filter === "all" || t.category_id === filter) &&
+        !t.completed &&
+        selected <= t.due_date,
+    ),
+  [tasks, selected, filter],
+);
 
   const dayRoutines = useMemo(() => {
     const dow = selected.getDay();
