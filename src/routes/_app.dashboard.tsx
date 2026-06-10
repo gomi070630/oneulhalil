@@ -38,7 +38,7 @@ function Dashboard() {
         .filter((t) => filter === "all" || t.category_id === filter)
         .map((t) => ({
           id: t.id,
-          startISO: t.start_date ?? t.due_date,
+          startISO: t.due_date,
           endISO: t.due_date,
           color: catMap[t.category_id ?? ""]?.color ?? "#94a3b8",
           title: t.title,
@@ -52,7 +52,7 @@ function Dashboard() {
       (t) =>
         (filter === "all" || t.category_id === filter) &&
         !t.completed &&
-        selected <= t.due_date,
+        selected <= parseISO(t.due_date)
     ),
   [tasks, selected, filter],
 );
@@ -216,7 +216,7 @@ function Dashboard() {
             const dday = dDayLabel(t.due_date);
             let dueDate = parseISO(t.due_date);
             if (t.due_date && !t.due_date.includes("T")) {
-  d.setHours(23, 59, 59);
+  dueDate.setHours(23, 59, 59);
 }
             const hoursLeft = Math.max(0, hoursBetween(new Date(), dueDate));
             const remainingPercent = Math.max(0, 100 - t.progress);
