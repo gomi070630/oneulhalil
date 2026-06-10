@@ -38,7 +38,7 @@ function Dashboard() {
         .filter((t) => filter === "all" || t.category_id === filter)
         .map((t) => ({
           id: t.id,
-          startISO: t.start_date,
+          startISO: t.start_date ?? t.due_date,
           endISO: t.due_date,
           color: catMap[t.category_id ?? ""]?.color ?? "#94a3b8",
           title: t.title,
@@ -64,7 +64,7 @@ function Dashboard() {
       if (r.repeat_type === "daily") return true;
       if (r.repeat_type === "weekday") return dow >= 1 && dow <= 5;
       if (r.repeat_type === "weekend") return dow === 0 || dow === 6;
-      return (r.repeat_days as number[]).includes(dow);
+      return (r.repeat_days ?? []).includes(dow);
     });
   }, [routines, selected]);
 
