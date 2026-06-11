@@ -33,18 +33,29 @@ function Dashboard() {
   const catMap = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])), [categories]);
 
   const bars: CalendarBar[] = useMemo(
-    () =>
-      tasks
-        .filter((t) => filter === "all" || t.category_id === filter)
-        .map((t) => ({
+  () =>
+    tasks
+      .filter((t) => filter === "all" || t.category_id === filter)
+      .map((t) => {
+        const today = new Date();
+
+        const start = parseISO(t.created_at);
+        const due = parseISO(t.due_date);
+
+        const visibleStart = new Date(
+          Math.max(start.getTime(), today.getTime())
+        );
+
+        return {
           id: t.id,
-          startISO: t.due_date,
-          endISO: t.due_date,
+          startISO: visibleStart.toISOString(),
+          endISO: due.toISOString(),
           color: catMap[t.category_id ?? ""]?.color ?? "#94a3b8",
           title: t.title,
-        })),
-    [tasks, catMap, filter],
-  );
+        };
+      }),
+  [tasks, catMap, filter],
+);
 
   const dayTasks = useMemo(
   () =>
@@ -107,22 +118,29 @@ function Dashboard() {
 
   return Math.round(100 - avgProgress);
 }, [activeTasks]);
-  const totalDailyTarget = useMemo(
-    () =>
-      Math.ceil(
-        activeTasks.reduce((sum, t) => {
-          const remaining = Math.max(0, 100 - t.progress);
-          let d = parseISO(t.due_date);
-          if (t.due_date && !t.due_date.includes("T")) {
-  d.setHours(23, 59, 59);
-}
-          let hoursLeft = hoursBetween(new Date(), d);
-          if (hoursLeft < 0) hoursLeft = 0;
-          return sum + remaining / Math.max(hoursLeft / 24, 0.1);
-        }, 0),
-      ),
-    [activeTasks],
-  );
+  const totalDailyTarget = useMemo(() => {
+  if (activeTasks.length === 0) return 0;
+
+  const todayTarget =
+    activeTasks.reduce((sum, t) => {
+      const remaining = Math.max(0, 100 - t.progress);
+
+      let d = parseISO(t.due_date);
+
+      if (t.due_date && !t.due_date.includes("T")) {
+        d.setHours(23, 59, 59);
+      }
+
+      const daysLeft = Math.max(
+        1,
+        hoursBetween(new Date(), d) / 24,
+      );
+
+      return sum + remaining / daysLeft;
+    }, 0) / activeTasks.length;
+
+  return Math.round(todayTarget);
+}, [activeTasks]);
   const summaryTone = overdueTasks.length > 0 ? "red" : dueSoonTasks.length > 0 ? "amber" : "blue";
   const summaryText =
     overdueTasks.length > 0
@@ -179,13 +197,13 @@ function Dashboard() {
               </div>
             </div>
             <div className="rounded-2xl bg-background/75 p-3">
-              <div className="font-medium text-foreground">하루 최소 목표</div>
+              <div className="font-medium text-foreground">오늘 권장 진도</div>
               <div className="mt-1 text-xl font-semibold text-foreground">{totalDailyTarget}%</div>
             </div>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            전체 남은 진도 {totalRemainingPercent}%를 마감 일정에 맞추려면 오늘 {totalDailyTarget}%
-            이상 진도를 유지하세요.
+            현재 과제들의 마감일을 기준으로 계산했을 때
+오늘 약 {totalDailyTarget}% 정도의 진도를 진행하면 좋아요.
           </p>
         </div>
       </section>
@@ -294,20 +312,26 @@ function Dashboard() {
                   </button>
                   <TaskFormDialog task={t}>
                     <div className="flex-1 min-w-0 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="size-2 rounded-full"
-                          style={{ background: c?.color ?? "#94a3b8" }}
-                        />
-                        <h3
-                          className={cn(
-                            "text-sm font-medium truncate",
-                            t.completed && "line-through",
-                          )}
-                        >
-                          {t.title}
-                        </h3>
-                      </div>
+                      <div className="flex items-center gap-2 min-w-0">
+  <span
+    className="size-2 rounded-full"
+    style={{ background: c?.color ?? "#94a3b8" }}
+  />
+
+  <h3
+    className={cn(
+      "text-sm font-medium truncate",
+      t.completed && "line-through",
+    )}
+  >
+    {t.title}
+  </h3>
+
+  <span className="text-[10px] text-muted-foreground shrink-0">
+    {dday.text} · {new Date(t.due_date).getMonth() + 1}/
+    {new Date(t.due_date).getDate()}
+  </span>
+</div>
                       <div className="flex items-center gap-2 mt-1.5 ml-4">
                         <div className="h-1 w-20 bg-muted rounded-full overflow-hidden">
                           <div
