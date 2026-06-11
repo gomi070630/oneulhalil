@@ -98,10 +98,15 @@ function Dashboard() {
       }),
     [activeTasks],
   );
-  const totalRemainingPercent = useMemo(
-    () => activeTasks.reduce((sum, t) => sum + Math.max(0, 100 - t.progress), 0),
-    [activeTasks],
-  );
+  const totalRemainingPercent = useMemo(() => {
+  if (activeTasks.length === 0) return 0;
+
+  const avgProgress =
+    activeTasks.reduce((sum, t) => sum + t.progress, 0) /
+    activeTasks.length;
+
+  return Math.round(100 - avgProgress);
+}, [activeTasks]);
   const totalDailyTarget = useMemo(
     () =>
       Math.ceil(
